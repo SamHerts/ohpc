@@ -1,61 +1,81 @@
-<!-- markdownlint-disable MD013 MD033 -->
-# <img src="https://github.com/openhpc/ohpc/blob/master/docs/recipes/install/common/figures/ohpc_logo.png" width="170" valign="middle" hspace="5" alt="OpenHPC"/>
-<!-- markdownlint-enable MD013 MD033 -->
+# OpenHPC 4.x with Slurm running Rocky10 in a container
 
-## Community building blocks for HPC systems
+This is a simple single-user container environment for learning and testing
+Slurm on OpenHPC 4.x with Rocky10.
 
-### Introduction
+The cluster contains a head node, login node, and 8 compute nodes as separate
+containers with a shared docker network and shared docker storage.  The
+containers are named `openhpc-head`, `openhpc-login` and `openhpc-node-[0-7]`
+respectively and will overwrite/delete any local containers with those names.
+Shared storage is in /project and /scratch in volumes
+`openhpc-container-project` and `openhpc-container-scratch` respectively.  The
+/home directory is not shared.
 
-This stack provides a variety of common, pre-built ingredients required to
-deploy and manage an HPC Linux cluster including provisioning tools, resource
-management, I/O clients, runtimes, development tools, containers, and a variety of
-scientific libraries.
+## Run the cluster
 
-There are currently three release series: the [2.x][2xbranch], the
-[3.x][3xbranch] and the [4.x][4xbranch] which target different major Linux OS
-distributions:
+If you want to use podman or another container system with the same syntax as
+Docker, set the `CONTAINER` environment variable as follows:
 
-- The 2.x series targets EL8 and Leap15.
-- The 3.x series targets EL9, Leap 15 and openEuler 22.03.
-- The 4.x series targets EL10 and openEuler 24.03.
+```bash
+export CONTAINER=podman
+```
 
-### Getting started
+Build and Run the cluster with the following:
 
-OpenHPC provides pre-built binaries via repositories for use with standard
-Linux package manager tools (e.g. ```dnf``` or ```zypper```). To get started,
-you can enable an OpenHPC repository locally through installation of an
-```ohpc-release``` RPM which includes gpg keys for package signing and defines
-the URL locations for [base] and [update] package repositories. Installation
-guides tailored for each supported provisioning system and resource manager
-with detailed example instructions for installing a cluster are also available.
-Copies of the ```ohpc-release``` package and installation guides along with
-more information is available on the relevant release series pages
-([2.x][2xbranch], [3.x][3xbranch] or [4.x][4xbranch]).
+```bash
+./run.sh
+```
 
----
+This will create a Docker network and shared storage and start the cluster with
+8 nodes and connect to the login node.  Exiting the shell will shutdown the
+cluster cleanly.
 
-### Questions, Comments, or Bug Reports?
+To connect to the cluster as if you were using `ssh login` use the following in
+a new terminal:
 
-Subscribe to the [users email list][userlist] or see the
-<https://openhpc.community/> page for more pointers.
+```bash
+./ssh.sh
+```
 
-### Additional Software Requests?
+To login to the head node as root run the following in a separate terminal
+(everything will be lost when exiting from `./run.sh`):
 
-Please see the component [submission page][submission] for more information
-regarding new software inclusion requests.
+```bash
+USER=root ./ssh.sh
+```
 
-### Contributing to OpenHPC
+When you are done run the following:
 
-Please see the steps described in [CONTRIBUTING.md](CONTRIBUTING.md).
+```bash
+./delete.sh
+```
 
-### Register your system
+This will remove the container cluster network, storage, and container images.
+You may want to prune the container images as well.
 
-If you are using elements of OpenHPC, please consider registering your system(s)
-using the [System Registration Form][register].
+## Examples
 
-[2xbranch]: https://github.com/openhpc/ohpc/wiki/2.x
-[3xbranch]: https://github.com/openhpc/ohpc/wiki/3.x
-[4xbranch]: https://github.com/openhpc/ohpc/wiki/4.x
-[register]: https://drive.google.com/open?id=1KvFM5DONJigVhOlmDpafNTDDRNTYVdolaYYzfrHkOWI
-[submission]: https://github.com/openhpc/submissions
-[userlist]: https://groups.io/g/openhpc-users
+Copy examples to project folder
+
+If you have rsync installed locally (look at ./rsync.sh for details), run in a
+new local terminal:
+
+```bash
+./rsync.sh -av ./examples openhpc-login:/project/$USER/
+```
+
+If you don't have rsync
+
+```bash
+docker cp examples openhpc-login:/project/$USER/
+docker exec -i openhpc-login chown -R $USER:$USER /project/$USER
+```
+
+And run the MPI example
+
+```bash
+cd /project/$USER/examples/mpi
+bash run.sh
+```
+
+Check the results in the `slurm-*.out` file

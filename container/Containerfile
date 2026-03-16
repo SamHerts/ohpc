@@ -1,0 +1,53 @@
+FROM registry.docker.com/rockylinux/rockylinux:10
+## This container is based on ../openhpc/Containerfile and ../node/Containerfile.
+## The keeps it in a single file for simplicity, please keep containers in sync.
+## The sections (delimited with a comment) are identical.  The scheduler has been removed.
+
+### ../openhpc/Containerfile
+
+## Base install
+ARG ARCH=aarch64
+RUN dnf install -y http://repos.openhpc.community/OpenHPC/4/EL_10/$ARCH/ohpc-release-4-1.el10.$ARCH.rpm
+
+RUN dnf install -y dnf-plugins-core && \
+    dnf config-manager --set-enabled crb && \
+    dnf upgrade -y && \
+    dnf install -y unzip jq yq procps-ng iproute bind-utils findutils && \
+    dnf install -y ohpc-base
+
+## Common packages
+RUN dnf install -y iputils vim rsync unzip git
+
+## Create user
+ARG USER=auser
+RUN useradd --create-home --shell=/bin/bash --user-group $USER && \
+    install -dp /project /scratch && \
+    install -v -dp --owner=$USER --group=$USER /project/$USER /scratch/$USER
+
+### ../node/Containerfile
+
+## Base compute node
+RUN dnf install -y ohpc-base-compute lmod-ohpc \
+    git patch file zstd bzip2 xz \
+    python3 python3-pip \
+    gcc-c++ gcc-gfortran \
+    ohpc-gnu15-runtimes gnu15-compilers-ohpc \
+    openmpi5-pmix-gnu15-ohpc openblas-gnu15-ohpc netcdf-gnu15-openmpi5-ohpc
+
+## Compilers, runtimes, and libraries.
+RUN dnf install -y spack-ohpc ohpc-gnu15-openmpi5-parallel-libs \
+    ohpc-gnu15-python-libs ohpc-gnu15-runtimes
+
+### Container configuration (unique to this container)
+
+## Allow sudo
+RUN passwd -d $USER && \
+  echo "$USER ALL=(ALL:ALL) NOPASSWD:ALL" > /etc/sudoers.d/20-$USER
+
+RUN dnf clean all && \
+    rm -rf /var/cache/dnf /var/log/dnf.librepo.log /var/log/dnf.rpm.log /var/log/hawkey.log
+
+## User entry point
+WORKDIR /home/$USER
+USER $USER:$USER
+CMD [ "/usr/bin/bash", "-l" ]
