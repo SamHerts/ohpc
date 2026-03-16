@@ -1,3 +1,0 @@
-SUBSYSTEM=="msr_safe", GROUP="root", MODE="0666"
-SUBSYSTEM=="msr_batch", GROUP="root", MODE="0666"
-SUBSYSTEM=="msr_allowlist", GROUP="root", MODE="0664"

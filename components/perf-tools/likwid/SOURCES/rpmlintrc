@@ -1,3 +1,0 @@
-addFilter("wrong-script-interpreter")
-addFilter("library-without-ldconfig")
-setBadness('permissions-file-setuid-bit', 1)
